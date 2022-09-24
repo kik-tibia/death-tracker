@@ -73,12 +73,12 @@ class DeathTrackerStream(deathsChannel: TextChannel)(implicit ex: ExecutionConte
   }.withAttributes(logAndResume)
 
   private lazy val postToDiscordAndCleanUp = Flow[Set[CharDeath]].mapAsync(1) { charDeaths =>
-    val embeds = charDeaths.map { charDeath =>
+    val embeds = charDeaths.toList.sortBy(_.death.time).map { charDeath =>
       val charName = charDeath.char.characters.character.name
       val killer = charDeath.death.killers.last.name
       val epochSecond = ZonedDateTime.parse(charDeath.death.time).toEpochSecond
       new EmbedBuilder()
-        .setTitle(charName, charUrl(charName))
+        .setTitle(s"$charName ${vocEmoji(charDeath.char)}", charUrl(charName))
         .setDescription(s"Killed at level ${charDeath.death.level.toInt} by **$killer**\nKilled at <t:$epochSecond>")
         .setThumbnail(creatureImageUrl(killer))
         .setColor(13773097)
@@ -102,6 +102,18 @@ class DeathTrackerStream(deathsChannel: TextChannel)(implicit ex: ExecutionConte
     recentDeaths.filterInPlace { i =>
       val diff = java.time.Duration.between(i.time, now).getSeconds
       diff < deathRecentDuration
+    }
+  }
+
+  private def vocEmoji(char: CharacterResponse): String = {
+    val voc = char.characters.character.vocation.toLowerCase.split(' ').last
+    voc match {
+      case "knight" => ":shield:"
+      case "druid" => ":snowflake:"
+      case "sorcerer" => ":fire:"
+      case "paladin" => ":bow_and_arrow:"
+      case "none" => ":hatching_chick:"
+      case _ => ""
     }
   }
 
