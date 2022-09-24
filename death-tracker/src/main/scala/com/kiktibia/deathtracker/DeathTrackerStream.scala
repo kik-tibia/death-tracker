@@ -73,7 +73,11 @@ class DeathTrackerStream(deathsChannel: TextChannel)(implicit ex: ExecutionConte
   }.withAttributes(logAndResume)
 
   private lazy val postToDiscordAndCleanUp = Flow[Set[CharDeath]].mapAsync(1) { charDeaths =>
-    val embeds = charDeaths.toList.sortBy(_.death.time).map { charDeath =>
+    // Filter only the interesting deaths (nemesis bosses, rare bestiary)
+    val notableDeaths: List[CharDeath] = charDeaths.toList.filter { charDeath =>
+      Config.notableCreatures.exists(c => c.endsWith(charDeath.death.killers.last.name))
+    }
+    val embeds = notableDeaths.sortBy(_.death.time).map { charDeath =>
       val charName = charDeath.char.characters.character.name
       val killer = charDeath.death.killers.last.name
       val epochSecond = ZonedDateTime.parse(charDeath.death.time).toEpochSecond
@@ -121,20 +125,17 @@ class DeathTrackerStream(deathsChannel: TextChannel)(implicit ex: ExecutionConte
     s"https://www.tibia.com/community/?name=${char.replaceAll(" ", "+")}"
 
   private def creatureImageUrl(creature: String): String = {
-    val creatureExceptions = HashMap(
-      "sabretooth" -> "Sabretooth_(Creature)",
-      "a trap" -> "Dead_Human1",
-      "trap" -> "Dead_Human1",
-      "Avalanche" -> "Avalanche_(Creature)",
-      "Yalahari" -> "Yalahari_(Creature)",
-      "lava puddle" -> "Lava_Puddle_(Creature)"
-    )
+    val finalCreature = Config.creatureUrlMappings.getOrElse(creature.toLowerCase, {
+      // Capitalise the start of each word, including after punctuation e.g. "Mooh'Tah Warrior", "Two-Headed Turtle"
+      val rx1 = """([^\w]\w)""".r
+      val parsed1 = rx1.replaceAllIn(creature, m => m.group(1).toUpperCase)
 
-    val finalCreature = creatureExceptions.getOrElse(creature, {
-      val rx = """( A| Of| The| In| On| To| And| With| From)(?=( ))""".r
-      val parsed = creature.split(' ').map(_.capitalize).mkString(" ")
-        .replaceAll(" ", "_")
-      rx.replaceAllIn(parsed, m => m.group(1).toLowerCase)
+      // Lowercase the articles, prepositions etc., e.g. "The Voice of Ruin"
+      val rx2 = """( A| Of| The| In| On| To| And| With| From)(?=( ))""".r
+      val parsed2 = rx2.replaceAllIn(parsed1, m => m.group(1).toLowerCase)
+
+      // Replace spaces with underscores and make sure the first letter is capitalised
+      parsed2.replaceAll(" ", "_").capitalize
     })
     s"https://tibia.fandom.com/wiki/Special:Redirect/file/$finalCreature.gif"
   }
