@@ -74,10 +74,9 @@ class DeathTrackerStream(deathsChannel: TextChannel)(implicit ex: ExecutionConte
 
   private lazy val postToDiscordAndCleanUp = Flow[Set[CharDeath]].mapAsync(1) { charDeaths =>
     // Filter only the interesting deaths (nemesis bosses, rare bestiary)
-    val notableDeaths: List[CharDeath] = charDeaths.toList
-    //      .filter { charDeath =>
-    //      Config.notableCreatures.exists(c => c.endsWith(charDeath.death.killers.last.name))
-    //    }
+    val notableDeaths: List[CharDeath] = charDeaths.toList.filter { charDeath =>
+      Config.notableCreatures.exists(c => c.endsWith(charDeath.death.killers.last.name))
+    }
     val embeds = notableDeaths.sortBy(_.death.time).map { charDeath =>
       val charName = charDeath.char.characters.character.name
       val killer = charDeath.death.killers.last.name
