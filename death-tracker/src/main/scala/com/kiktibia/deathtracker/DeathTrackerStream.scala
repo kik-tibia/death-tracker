@@ -38,7 +38,7 @@ class DeathTrackerStream(deathsChannel: TextChannel)(implicit ex: ExecutionConte
   }
   private val logAndResume: Attributes = supervisionStrategy(logAndResumeDecider)
 
-  private lazy val sourceTick = Source.tick(2.seconds, 180.seconds, ())
+  private lazy val sourceTick = Source.tick(2.seconds, 120.seconds, ())
 
   private lazy val getWorld = Flow[Unit].mapAsync(1) { _ =>
     logger.info("Running stream")
@@ -74,9 +74,10 @@ class DeathTrackerStream(deathsChannel: TextChannel)(implicit ex: ExecutionConte
 
   private lazy val postToDiscordAndCleanUp = Flow[Set[CharDeath]].mapAsync(1) { charDeaths =>
     // Filter only the interesting deaths (nemesis bosses, rare bestiary)
-    val notableDeaths: List[CharDeath] = charDeaths.toList.filter { charDeath =>
-      Config.notableCreatures.exists(c => c.endsWith(charDeath.death.killers.last.name))
-    }
+    val notableDeaths: List[CharDeath] = charDeaths.toList
+    //      .filter { charDeath =>
+    //      Config.notableCreatures.exists(c => c.endsWith(charDeath.death.killers.last.name))
+    //    }
     val embeds = notableDeaths.sortBy(_.death.time).map { charDeath =>
       val charName = charDeath.char.characters.character.name
       val killer = charDeath.death.killers.last.name
@@ -88,8 +89,9 @@ class DeathTrackerStream(deathsChannel: TextChannel)(implicit ex: ExecutionConte
         .setColor(13773097)
         .build()
     }
-    if (embeds.nonEmpty) {
-      deathsChannel.sendMessageEmbeds(embeds.asJava).queue()
+    // Send the embeds one at a time, otherwise some don't get sent if sending a lot at once
+    embeds.foreach { embed =>
+      deathsChannel.sendMessageEmbeds(embed).queue()
     }
     cleanUp()
 

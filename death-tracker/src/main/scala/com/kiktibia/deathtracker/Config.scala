@@ -1,6 +1,6 @@
 package com.kiktibia.deathtracker
 
-import com.typesafe.config.{ConfigFactory, ConfigObject}
+import com.typesafe.config.ConfigFactory
 
 import scala.jdk.CollectionConverters._
 
