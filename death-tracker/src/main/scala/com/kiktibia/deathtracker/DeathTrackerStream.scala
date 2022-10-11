@@ -11,11 +11,9 @@ import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.TextChannel
 
 import java.time.ZonedDateTime
-import scala.collection.immutable.HashMap
 import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContextExecutor, Future}
-import scala.jdk.CollectionConverters._
 
 class DeathTrackerStream(deathsChannel: TextChannel)(implicit ex: ExecutionContextExecutor, mat: Materializer) extends StrictLogging {
 
@@ -38,7 +36,7 @@ class DeathTrackerStream(deathsChannel: TextChannel)(implicit ex: ExecutionConte
   }
   private val logAndResume: Attributes = supervisionStrategy(logAndResumeDecider)
 
-  private lazy val sourceTick = Source.tick(2.seconds, 120.seconds, ())
+  private lazy val sourceTick = Source.tick(2.seconds, 90.seconds, ())
 
   private lazy val getWorld = Flow[Unit].mapAsync(1) { _ =>
     logger.info("Running stream")
@@ -50,7 +48,7 @@ class DeathTrackerStream(deathsChannel: TextChannel)(implicit ex: ExecutionConte
     val online: List[String] = worldResponse.worlds.world.online_players.map(_.name)
     recentOnline.filterInPlace(i => !online.contains(i.char)) // Remove existing online chars from the list...
     recentOnline.addAll(online.map(i => CharKey(i, now))) // ...and add them again, with an updated online time
-    val charsToCheck: Set[String] = recentOnline.map(_.char).toSet
+    val charsToCheck: Set[String] = recentOnline.map(_.char).toSet ++ Config.trackedPlayers
     Source(charsToCheck).mapAsyncUnordered(16)(tibiaDataClient.getCharacter).runWith(Sink.collection).map(_.toSet)
   }.withAttributes(logAndResume)
 
@@ -75,7 +73,7 @@ class DeathTrackerStream(deathsChannel: TextChannel)(implicit ex: ExecutionConte
   private lazy val postToDiscordAndCleanUp = Flow[Set[CharDeath]].mapAsync(1) { charDeaths =>
     // Filter only the interesting deaths (nemesis bosses, rare bestiary)
     val (notableDeaths, normalDeaths) = charDeaths.toList.partition { charDeath =>
-      Config.notableCreatures.exists(c => c.endsWith(charDeath.death.killers.last.name.toLowerCase))
+      Config.notableCreatures.exists(c => charDeath.death.killers.last.name.toLowerCase.endsWith(c))
     }
 
     logger.info(s"New notable deaths: ${notableDeaths.length}")
@@ -98,6 +96,10 @@ class DeathTrackerStream(deathsChannel: TextChannel)(implicit ex: ExecutionConte
     embeds.foreach { embed =>
       deathsChannel.sendMessageEmbeds(embed).queue()
     }
+    if (embeds.nonEmpty) {
+      deathsChannel.sendMessage("@here").queue()
+    }
+
     cleanUp()
 
     Future.successful()
