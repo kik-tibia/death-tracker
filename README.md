@@ -14,4 +14,4 @@ Copy to server
 
 On the server
 1. Create an env file with the missing data from `src/main/resources/application.conf`
-1. Run the docker container, pointing to the env file created in step 1: `docker run --rm -d --env-file prod.env --name death-tracker <image_id>`
+1. Run the docker container, pointing to the env file created in step 1: `docker run --rm -d --env-file death-tracker-prod.env -v $HOME/data/death-tracker:$HOME/data/death-tracker --name death-tracker <image_id>`
