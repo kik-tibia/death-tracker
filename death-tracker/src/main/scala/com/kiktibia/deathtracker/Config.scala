@@ -10,7 +10,7 @@ object Config {
   val token: String = root.getString("token")
   val guildId: String = root.getString("guild-id")
   val deathsChannelId: String = root.getString("deaths-channel-id")
-  val trackedPlayers: List[String] = root.getStringList("tracked-players").asScala.toList
+  val trackedPlayerFile: String = root.getString("tracked-player-file")
   val creatureUrlMappings: Map[String, String] = root.getObject("creature-url-mappings").asScala.map {
     case (k, v) => k -> v.unwrapped().toString
   }.toMap

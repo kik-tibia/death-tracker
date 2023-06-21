@@ -9,6 +9,7 @@ import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import com.kiktibia.deathtracker.tibiadata.response.{CharacterResponse, WorldResponse}
 import com.typesafe.scalalogging.StrictLogging
+import spray.json.JsonParser.ParsingException
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
@@ -32,7 +33,11 @@ class TibiaDataClient extends JsonSupport with StrictLogging {
     for {
       response <- Http().singleRequest(HttpRequest(uri = s"$characterUrl${name.replaceAll(" ", "%20")}"))
       decoded = decodeResponse(response)
-      unmarshalled <- Unmarshal(decoded).to[CharacterResponse]
+      unmarshalled <- Unmarshal(decoded).to[CharacterResponse].recover {
+        case e: ParsingException =>
+          logger.warn(s"Failed to parse character with name $name")
+          throw e
+      }
     } yield unmarshalled
   }
 

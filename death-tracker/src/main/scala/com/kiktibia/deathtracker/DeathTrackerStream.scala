@@ -4,12 +4,13 @@ import akka.actor.Cancellable
 import akka.stream.ActorAttributes.supervisionStrategy
 import akka.stream.scaladsl.{Flow, RunnableGraph, Sink, Source}
 import akka.stream.{Attributes, Materializer, Supervision}
-import com.kiktibia.deathtracker.tibiadata.TibiaDataClient
+import com.kiktibia.deathtracker.tibiadata.{FileUtils, TibiaDataClient}
 import com.kiktibia.deathtracker.tibiadata.response.{CharacterResponse, Deaths, WorldResponse}
 import com.typesafe.scalalogging.StrictLogging
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.TextChannel
 
+import java.io.File
 import java.time.ZonedDateTime
 import scala.collection.mutable
 import scala.concurrent.duration._
@@ -30,13 +31,15 @@ class DeathTrackerStream(deathsChannel: TextChannel)(implicit ex: ExecutionConte
   private val deathRecentDuration = 30 * 60 // 30 minutes for a death to count as recent enough to be worth notifying
   private val onlineRecentDuration = 10 * 60 // 10 minutes for a character to still be checked for deaths after logging off
 
+  private val trackedPlayerFile = new File(Config.trackedPlayerFile)
+
   private val logAndResumeDecider: Supervision.Decider = { e =>
     logger.error("An exception has occurred in the DeathTrackerStream:", e)
     Supervision.Resume
   }
   private val logAndResume: Attributes = supervisionStrategy(logAndResumeDecider)
 
-  private lazy val sourceTick = Source.tick(2.seconds, 90.seconds, ())
+  private lazy val sourceTick = Source.tick(2.seconds, 25.seconds, ())
 
   private lazy val getWorld = Flow[Unit].mapAsync(1) { _ =>
     logger.info("Running stream")
@@ -48,7 +51,8 @@ class DeathTrackerStream(deathsChannel: TextChannel)(implicit ex: ExecutionConte
     val online: List[String] = worldResponse.worlds.world.online_players.map(_.name)
     recentOnline.filterInPlace(i => !online.contains(i.char)) // Remove existing online chars from the list...
     recentOnline.addAll(online.map(i => CharKey(i, now))) // ...and add them again, with an updated online time
-    val charsToCheck: Set[String] = recentOnline.map(_.char).toSet ++ Config.trackedPlayers
+    val trackedPlayers = FileUtils.getLines(trackedPlayerFile).filter(_.nonEmpty).filterNot(_.startsWith("#"))
+    val charsToCheck: Set[String] = recentOnline.map(_.char).toSet ++ trackedPlayers
     Source(charsToCheck).mapAsyncUnordered(16)(tibiaDataClient.getCharacter).runWith(Sink.collection).map(_.toSet)
   }.withAttributes(logAndResume)
 
