@@ -1,10 +1,7 @@
-ThisBuild / version := "1.1.0-SNAPSHOT"
+ThisBuild / version := "1.2.0"
+ThisBuild / scalaVersion := "2.13.9"
 
 name := "death-tracker"
-
-version := "0.1"
-
-scalaVersion := "2.13.9"
 
 enablePlugins(DockerPlugin)
 enablePlugins(JavaAppPackaging)

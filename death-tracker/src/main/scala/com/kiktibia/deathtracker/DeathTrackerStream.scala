@@ -29,9 +29,10 @@ class DeathTrackerStream(deathsChannel: TextChannel)(implicit ex: ExecutionConte
 
   private val tibiaDataClient = new TibiaDataClient()
 
-  private val deathRecentDuration = 30 * 60 // 30 minutes for a death to count as recent enough to be worth notifying
-  private val onlineRecentDuration = 10 *
-    60 // 10 minutes for a character to still be checked for deaths after logging off
+  // 30 minutes for a death to count as recent enough to be worth notifying
+  private val deathRecentDuration = 30 * 60
+  // 10 minutes for a character to still be checked for deaths after logging off
+  private val onlineRecentDuration = 10 * 60
 
   private val trackedPlayerFile = new File(Config.trackedPlayerFile)
   private val notableCreaturesFile = new File(Config.notableCreaturesFile)
