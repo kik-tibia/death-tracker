@@ -11,9 +11,9 @@ object Config {
   val guildId: String = root.getString("guild-id")
   val deathsChannelId: String = root.getString("deaths-channel-id")
   val trackedPlayerFile: String = root.getString("tracked-player-file")
-  val creatureUrlMappings: Map[String, String] = root.getObject("creature-url-mappings").asScala.map {
-    case (k, v) => k -> v.unwrapped().toString
+  val notableCreaturesFile: String = root.getString("notable-creatures-file")
+  val creatureUrlMappings: Map[String, String] = root.getObject("creature-url-mappings").asScala.map { case (k, v) =>
+    k -> v.unwrapped().toString
   }.toMap
-  val notableCreatures: List[String] = root.getStringList("notable-creatures").asScala.toList
 
 }

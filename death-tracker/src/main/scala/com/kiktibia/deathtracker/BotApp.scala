@@ -20,6 +20,7 @@ object BotApp extends App with StrictLogging {
   logger.info("JDA ready")
 
   private val guild: Guild = jda.getGuildById(Config.guildId)
+  println(guild)
 
   private val deathsChannel = guild.getTextChannelById(Config.deathsChannelId)
   private val deathTrackerStream = new DeathTrackerStream(deathsChannel)

@@ -16,7 +16,8 @@ import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
-class DeathTrackerStream(deathsChannel: TextChannel)(implicit ex: ExecutionContextExecutor, mat: Materializer) extends StrictLogging {
+class DeathTrackerStream(deathsChannel: TextChannel)(implicit ex: ExecutionContextExecutor, mat: Materializer)
+    extends StrictLogging {
 
   // A date-based "key" for a character, used to track recent deaths and recent online entries
   case class CharKey(char: String, time: ZonedDateTime)
@@ -29,9 +30,11 @@ class DeathTrackerStream(deathsChannel: TextChannel)(implicit ex: ExecutionConte
   private val tibiaDataClient = new TibiaDataClient()
 
   private val deathRecentDuration = 30 * 60 // 30 minutes for a death to count as recent enough to be worth notifying
-  private val onlineRecentDuration = 10 * 60 // 10 minutes for a character to still be checked for deaths after logging off
+  private val onlineRecentDuration = 10 *
+    60 // 10 minutes for a character to still be checked for deaths after logging off
 
   private val trackedPlayerFile = new File(Config.trackedPlayerFile)
+  private val notableCreaturesFile = new File(Config.notableCreaturesFile)
 
   private val logAndResumeDecider: Supervision.Decider = { e =>
     logger.error("An exception has occurred in the DeathTrackerStream:", e)
@@ -67,17 +70,17 @@ class DeathTrackerStream(deathsChannel: TextChannel)(implicit ex: ExecutionConte
         if (deathAge < deathRecentDuration && !recentDeaths.contains(charDeath)) {
           recentDeaths.add(charDeath)
           Some(CharDeath(char, death))
-        }
-        else None
+        } else None
       }
     }
     Future.successful(newDeaths)
   }.withAttributes(logAndResume)
 
   private lazy val postToDiscordAndCleanUp = Flow[Set[CharDeath]].mapAsync(1) { charDeaths =>
+    val notableCreatures = FileUtils.getLines(notableCreaturesFile).filter(_.nonEmpty).filterNot(_.startsWith("#"))
     // Filter only the interesting deaths (nemesis bosses, rare bestiary)
     val (notableDeaths, normalDeaths) = charDeaths.toList.partition { charDeath =>
-      Config.notableCreatures.exists(c => charDeath.death.killers.last.name.toLowerCase.endsWith(c))
+      notableCreatures.exists(c => charDeath.death.killers.last.name.toLowerCase.endsWith(c))
     }
 
     logger.info(s"New notable deaths: ${notableDeaths.length}")
@@ -89,20 +92,13 @@ class DeathTrackerStream(deathsChannel: TextChannel)(implicit ex: ExecutionConte
       val charName = charDeath.char.characters.character.name
       val killer = charDeath.death.killers.last.name
       val epochSecond = ZonedDateTime.parse(charDeath.death.time).toEpochSecond
-      new EmbedBuilder()
-        .setTitle(s"$charName ${vocEmoji(charDeath.char)}", charUrl(charName))
+      new EmbedBuilder().setTitle(s"$charName ${vocEmoji(charDeath.char)}", charUrl(charName))
         .setDescription(s"Killed at level ${charDeath.death.level.toInt} by **$killer**\nKilled at <t:$epochSecond>")
-        .setThumbnail(creatureImageUrl(killer))
-        .setColor(13773097)
-        .build()
+        .setThumbnail(creatureImageUrl(killer)).setColor(13773097).build()
     }
     // Send the embeds one at a time, otherwise some don't get sent if sending a lot at once
-    embeds.foreach { embed =>
-      deathsChannel.sendMessageEmbeds(embed).queue()
-    }
-    if (embeds.nonEmpty) {
-      deathsChannel.sendMessage("@here").queue()
-    }
+    embeds.foreach { embed => deathsChannel.sendMessageEmbeds(embed).queue() }
+    if (embeds.nonEmpty) { deathsChannel.sendMessage("@here").queue() }
 
     cleanUp()
 
@@ -134,30 +130,27 @@ class DeathTrackerStream(deathsChannel: TextChannel)(implicit ex: ExecutionConte
     }
   }
 
-  private def charUrl(char: String): String =
-    s"https://www.tibia.com/community/?name=${char.replaceAll(" ", "+")}"
+  private def charUrl(char: String): String = s"https://www.tibia.com/community/?name=${char.replaceAll(" ", "+")}"
 
   private def creatureImageUrl(creature: String): String = {
-    val finalCreature = Config.creatureUrlMappings.getOrElse(creature.toLowerCase, {
-      // Capitalise the start of each word, including after punctuation e.g. "Mooh'Tah Warrior", "Two-Headed Turtle"
-      val rx1 = """([^\w]\w)""".r
-      val parsed1 = rx1.replaceAllIn(creature, m => m.group(1).toUpperCase)
+    val finalCreature = Config.creatureUrlMappings.getOrElse(
+      creature.toLowerCase, {
+        // Capitalise the start of each word, including after punctuation e.g. "Mooh'Tah Warrior", "Two-Headed Turtle"
+        val rx1 = """([^\w]\w)""".r
+        val parsed1 = rx1.replaceAllIn(creature, m => m.group(1).toUpperCase)
 
-      // Lowercase the articles, prepositions etc., e.g. "The Voice of Ruin"
-      val rx2 = """( A| Of| The| In| On| To| And| With| From)(?=( ))""".r
-      val parsed2 = rx2.replaceAllIn(parsed1, m => m.group(1).toLowerCase)
+        // Lowercase the articles, prepositions etc., e.g. "The Voice of Ruin"
+        val rx2 = """( A| Of| The| In| On| To| And| With| From)(?=( ))""".r
+        val parsed2 = rx2.replaceAllIn(parsed1, m => m.group(1).toLowerCase)
 
-      // Replace spaces with underscores and make sure the first letter is capitalised
-      parsed2.replaceAll(" ", "_").capitalize
-    })
+        // Replace spaces with underscores and make sure the first letter is capitalised
+        parsed2.replaceAll(" ", "_").capitalize
+      }
+    )
     s"https://tibia.fandom.com/wiki/Special:Redirect/file/$finalCreature.gif"
   }
 
-  lazy val stream: RunnableGraph[Cancellable] =
-    sourceTick via
-      getWorld via
-      getCharacterData via
-      scanForDeaths via
-      postToDiscordAndCleanUp to Sink.ignore
+  lazy val stream: RunnableGraph[Cancellable] = sourceTick via getWorld via getCharacterData via scanForDeaths via
+    postToDiscordAndCleanUp to Sink.ignore
 
 }
