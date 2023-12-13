@@ -30,13 +30,10 @@ class TibiaDataClient extends JsonSupport with StrictLogging {
     } yield unmarshalled
   }
 
-  // import scala.concurrent.duration._
   def getCharacter(name: String): Future[Either[String, CharacterResponse]] = {
     for {
       response <- Http().singleRequest(HttpRequest(uri = s"$characterUrl${name.replaceAll(" ", "%20")}"))
       decoded = decodeResponse(response)
-      // s <- decoded.entity.toStrict(1.second).map(_.data.utf8String)
-      // _ = println(s)
       unmarshalled <- Unmarshal(decoded).to[CharacterResponse].map(Right(_))
         .recover { case e @ (_: ParsingException | _: DeserializationException) =>
           val errorMessage = s"Failed to parse character with name $name"
