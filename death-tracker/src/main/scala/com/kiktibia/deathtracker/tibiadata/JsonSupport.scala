@@ -11,14 +11,16 @@ trait JsonSupport extends SprayJsonSupport with DefaultJsonProtocol {
   implicit val strFormat: RootJsonFormat[String] = new RootJsonFormat[String] {
     override def write(obj: String): JsValue = new JsString(obj)
 
-    override def read(json: JsValue): String = StringEscapeUtils.unescapeHtml4(JsonConvertNoCustomImplicits.convert(json))
+    override def read(json: JsValue): String = StringEscapeUtils
+      .unescapeHtml4(JsonConvertNoCustomImplicits.convert(json))
   }
 
+  implicit val apiFormat: RootJsonFormat[Api] = jsonFormat3(Api)
+  implicit val statusFormat: RootJsonFormat[Status] = jsonFormat1(Status)
   implicit val informationFormat: RootJsonFormat[Information] = jsonFormat2(Information)
 
   implicit val onlinePlayersFormat: RootJsonFormat[OnlinePlayers] = jsonFormat3(OnlinePlayers)
   implicit val worldFormat: RootJsonFormat[World] = jsonFormat16(World)
-  implicit val worldsFormat: RootJsonFormat[Worlds] = jsonFormat1(Worlds)
   implicit val worldResponseFormat: RootJsonFormat[WorldResponse] = jsonFormat2(WorldResponse)
 
   implicit val housesFormat: RootJsonFormat[Houses] = jsonFormat4(Houses)
@@ -37,15 +39,16 @@ trait JsonSupport extends SprayJsonSupport with DefaultJsonProtocol {
   implicit val deathsFormat: RootJsonFormat[Deaths] = jsonFormat5(Deaths)
   implicit val accountInformationFormat: RootJsonFormat[AccountInformation] = jsonFormat3(AccountInformation)
   // required because TibiaData returns an empty object instead of null when a player has no account info
-  implicit val optAccountInformationFormat: RootJsonFormat[Option[AccountInformation]] = new RootJsonFormat[Option[AccountInformation]] {
-    override def read(json: JsValue): Option[AccountInformation] = json match {
-      case JsObject.empty => None
-      case j => Some(j.convertTo[AccountInformation])
-    }
+  implicit val optAccountInformationFormat: RootJsonFormat[Option[AccountInformation]] =
+    new RootJsonFormat[Option[AccountInformation]] {
+      override def read(json: JsValue): Option[AccountInformation] = json match {
+        case JsObject.empty => None
+        case j => Some(j.convertTo[AccountInformation])
+      }
 
-    override def write(obj: Option[AccountInformation]): JsValue = ???
-  }
-  implicit val charactersFormat: RootJsonFormat[Characters] = jsonFormat3(Characters)
+      override def write(obj: Option[AccountInformation]): JsValue = ???
+    }
+  implicit val charactersFormat: RootJsonFormat[CharacterSheet] = jsonFormat3(CharacterSheet)
   implicit val characterResponseFormat: RootJsonFormat[CharacterResponse] = jsonFormat2(CharacterResponse)
 
 }
@@ -54,5 +57,3 @@ trait JsonSupport extends SprayJsonSupport with DefaultJsonProtocol {
 object JsonConvertNoCustomImplicits extends SprayJsonSupport with DefaultJsonProtocol {
   def convert(json: JsValue): String = json.convertTo[String]
 }
-
-

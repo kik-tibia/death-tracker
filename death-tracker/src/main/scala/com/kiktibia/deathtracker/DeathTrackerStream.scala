@@ -52,22 +52,23 @@ class DeathTrackerStream(deathsChannel: TextChannel)(implicit ex: ExecutionConte
 
   private lazy val getCharacterData = Flow[WorldResponse].mapAsync(1) { worldResponse =>
     val now = ZonedDateTime.now()
-    val online: List[String] = worldResponse.worlds.world.online_players.map(_.name)
+    val online: List[String] = worldResponse.world.online_players.map(_.name)
     recentOnline.filterInPlace(i => !online.contains(i.char)) // Remove existing online chars from the list...
     recentOnline.addAll(online.map(i => CharKey(i, now))) // ...and add them again, with an updated online time
     val trackedPlayers = FileUtils.getLines(trackedPlayerFile).filter(_.nonEmpty).filterNot(_.startsWith("#"))
     val charsToCheck: Set[String] = recentOnline.map(_.char).toSet ++ trackedPlayers
-    Source(charsToCheck).mapAsyncUnordered(16)(tibiaDataClient.getCharacter).runWith(Sink.collection).map(_.toSet)
+    Source(charsToCheck).mapAsyncUnordered(16)(tibiaDataClient.getCharacter).runWith(Sink.collection)
+      .map(_.flatMap(_.toOption).toSet)
   }.withAttributes(logAndResume)
 
   private lazy val scanForDeaths = Flow[Set[CharacterResponse]].mapAsync(1) { characterResponses =>
     val now = ZonedDateTime.now()
     val newDeaths = characterResponses.flatMap { char =>
-      val deaths: List[Deaths] = char.characters.deaths.getOrElse(List.empty)
+      val deaths: List[Deaths] = char.character.deaths.getOrElse(List.empty)
       deaths.flatMap { death =>
         val deathTime = ZonedDateTime.parse(death.time)
         val deathAge = java.time.Duration.between(deathTime, now).getSeconds
-        val charDeath = CharKey(char.characters.character.name, deathTime)
+        val charDeath = CharKey(char.character.character.name, deathTime)
         if (deathAge < deathRecentDuration && !recentDeaths.contains(charDeath)) {
           recentDeaths.add(charDeath)
           Some(CharDeath(char, death))
@@ -85,12 +86,12 @@ class DeathTrackerStream(deathsChannel: TextChannel)(implicit ex: ExecutionConte
     }
 
     logger.info(s"New notable deaths: ${notableDeaths.length}")
-    notableDeaths.foreach(d => logger.info(s"${d.char.characters.character.name} - ${d.death.killers.last.name}"))
+    notableDeaths.foreach(d => logger.info(s"${d.char.character.character.name} - ${d.death.killers.last.name}"))
     logger.info(s"New normal deaths: ${normalDeaths.length}")
-    normalDeaths.foreach(d => logger.info(s"${d.char.characters.character.name} - ${d.death.killers.last.name}"))
+    normalDeaths.foreach(d => logger.info(s"${d.char.character.character.name} - ${d.death.killers.last.name}"))
 
     val embeds = notableDeaths.sortBy(_.death.time).map { charDeath =>
-      val charName = charDeath.char.characters.character.name
+      val charName = charDeath.char.character.character.name
       val killer = charDeath.death.killers.last.name
       val epochSecond = ZonedDateTime.parse(charDeath.death.time).toEpochSecond
       new EmbedBuilder().setTitle(s"$charName ${vocEmoji(charDeath.char)}", charUrl(charName))
@@ -120,7 +121,7 @@ class DeathTrackerStream(deathsChannel: TextChannel)(implicit ex: ExecutionConte
   }
 
   private def vocEmoji(char: CharacterResponse): String = {
-    val voc = char.characters.character.vocation.toLowerCase.split(' ').last
+    val voc = char.character.character.vocation.toLowerCase.split(' ').last
     voc match {
       case "knight" => ":shield:"
       case "druid" => ":snowflake:"
