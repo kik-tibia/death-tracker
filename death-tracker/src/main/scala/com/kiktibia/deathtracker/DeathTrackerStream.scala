@@ -55,7 +55,7 @@ class DeathTrackerStream(deathsChannel: TextChannel)(implicit ex: ExecutionConte
     val online: List[String] = worldResponse.world.online_players.map(_.name)
     recentOnline.filterInPlace(i => !online.contains(i.char)) // Remove existing online chars from the list...
     recentOnline.addAll(online.map(i => CharKey(i, now))) // ...and add them again, with an updated online time
-    val trackedPlayers = FileUtils.getLines(trackedPlayerFile).filter(_.nonEmpty).filterNot(_.startsWith("#"))
+    val trackedPlayers = getTrackedPlayers()
     val charsToCheck: Set[String] = recentOnline.map(_.char).toSet ++ trackedPlayers
     Source(charsToCheck).mapAsyncUnordered(16)(tibiaDataClient.getCharacter).runWith(Sink.collection)
       .map(_.flatMap(_.toOption).toSet)
@@ -118,6 +118,7 @@ class DeathTrackerStream(deathsChannel: TextChannel)(implicit ex: ExecutionConte
       val diff = java.time.Duration.between(i.time, now).getSeconds
       diff < deathRecentDuration
     }
+    tibiaDataClient.cleanupMap(recentOnline.map(_.char).toSet ++ getTrackedPlayers())
   }
 
   private def vocEmoji(char: CharacterResponse): String = {
@@ -151,6 +152,9 @@ class DeathTrackerStream(deathsChannel: TextChannel)(implicit ex: ExecutionConte
     )
     s"https://tibia.fandom.com/wiki/Special:Redirect/file/$finalCreature.gif"
   }
+
+  private def getTrackedPlayers() = FileUtils.getLines(trackedPlayerFile).filter(_.nonEmpty)
+    .filterNot(_.startsWith("#"))
 
   lazy val stream: RunnableGraph[Cancellable] = sourceTick via getWorld via getCharacterData via scanForDeaths via
     postToDiscordAndCleanUp to Sink.ignore
