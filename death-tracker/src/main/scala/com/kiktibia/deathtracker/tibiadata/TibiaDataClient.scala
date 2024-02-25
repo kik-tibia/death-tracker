@@ -44,12 +44,13 @@ class TibiaDataClient extends JsonSupport with StrictLogging {
   def getCharacter(name: String): Future[Either[String, CharacterResponse]] = {
     for {
       response <- Http().singleRequest(HttpRequest(uri = s"$characterUrl${name.replaceAll(" ", "%20")}"))
+
       dateHeader = response.header[DateHeader].map { h =>
         val local = LocalDateTime.parse(h.date.toIsoDateTimeString())
         ZonedDateTime.of(local, ZoneId.of("GMT"))
       }
-
       characterCachedDate = characterMap.get(name)
+
       unmarshalled <- (dateHeader, characterCachedDate) match {
         case (Some(date), Some(cachedDate)) if date == cachedDate =>
           response.discardEntityBytes()
