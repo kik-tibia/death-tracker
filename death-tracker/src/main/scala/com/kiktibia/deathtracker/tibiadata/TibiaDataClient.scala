@@ -1,25 +1,26 @@
 package com.kiktibia.deathtracker
 package tibiadata
 
-import scala.collection.mutable
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.coding.Coders
+import akka.http.scaladsl.model.HttpRequest
+import akka.http.scaladsl.model.HttpResponse
 import akka.http.scaladsl.model.headers.HttpEncodings
-import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
-import akka.http.scaladsl.unmarshalling.Unmarshal
-import com.kiktibia.deathtracker.tibiadata.response.{CharacterResponse, WorldResponse}
-import com.typesafe.scalalogging.StrictLogging
-import spray.json.JsonParser.ParsingException
 import akka.http.scaladsl.model.headers.{Date => DateHeader}
-
-import scala.concurrent.{ExecutionContextExecutor, Future}
+import akka.http.scaladsl.unmarshalling.Unmarshal
+import com.kiktibia.deathtracker.tibiadata.response.CharacterResponse
+import com.kiktibia.deathtracker.tibiadata.response.WorldResponse
+import com.typesafe.scalalogging.StrictLogging
 import spray.json.DeserializationException
-import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
+import spray.json.JsonParser.ParsingException
+
 import java.time.LocalDateTime
 import java.time.ZoneId
-import java.time.Duration
+import java.time.ZonedDateTime
+import scala.collection.mutable
+import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.Future
 
 class TibiaDataClient extends JsonSupport with StrictLogging {
 
