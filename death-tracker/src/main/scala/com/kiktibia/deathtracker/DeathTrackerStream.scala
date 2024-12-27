@@ -2,21 +2,32 @@ package com.kiktibia.deathtracker
 
 import akka.actor.Cancellable
 import akka.stream.ActorAttributes.supervisionStrategy
-import akka.stream.scaladsl.{Flow, RunnableGraph, Sink, Source}
-import akka.stream.{Attributes, Materializer, Supervision}
-import com.kiktibia.deathtracker.tibiadata.{FileUtils, TibiaDataClient}
-import com.kiktibia.deathtracker.tibiadata.response.{CharacterResponse, Deaths, WorldResponse}
+import akka.stream.Attributes
+import akka.stream.Materializer
+import akka.stream.Supervision
+import akka.stream.scaladsl.Flow
+import akka.stream.scaladsl.RunnableGraph
+import akka.stream.scaladsl.Sink
+import akka.stream.scaladsl.Source
+import com.kiktibia.deathtracker.tibiadata.FileUtils
+import com.kiktibia.deathtracker.tibiadata.TibiaDataClient
+import com.kiktibia.deathtracker.tibiadata.response.CharacterResponse
+import com.kiktibia.deathtracker.tibiadata.response.Deaths
+import com.kiktibia.deathtracker.tibiadata.response.WorldResponse
 import com.typesafe.scalalogging.StrictLogging
 import net.dv8tion.jda.api.EmbedBuilder
+import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.TextChannel
 
 import java.io.File
 import java.time.ZonedDateTime
 import scala.collection.mutable
+import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContextExecutor, Future}
+import scala.jdk.CollectionConverters._
 
-class DeathTrackerStream(deathsChannel: TextChannel)(implicit ex: ExecutionContextExecutor, mat: Materializer)
+class DeathTrackerStream(guilds: List[Guild])(implicit ex: ExecutionContextExecutor, mat: Materializer)
     extends StrictLogging {
 
   // A date-based "key" for a character, used to track recent deaths and recent online entries
@@ -98,9 +109,15 @@ class DeathTrackerStream(deathsChannel: TextChannel)(implicit ex: ExecutionConte
         .setDescription(s"Killed at level ${charDeath.death.level.toInt} by **$killer**\nKilled at <t:$epochSecond>")
         .setThumbnail(creatureImageUrl(killer)).setColor(13773097).build()
     }
-    // Send the embeds one at a time, otherwise some don't get sent if sending a lot at once
-    embeds.foreach { embed => deathsChannel.sendMessageEmbeds(embed).queue() }
-    if (embeds.nonEmpty) { deathsChannel.sendMessage("@here").queue() }
+
+    guilds.foreach { guild =>
+      guild.getTextChannels().asScala.find(c => c.getName().endsWith("alert") || c.getName().endsWith("alerts"))
+        .foreach { channel =>
+          // Send the embeds one at a time, otherwise some don't get sent if sending a lot at once
+          embeds.foreach { embed => channel.sendMessageEmbeds(embed).queue() }
+          if (embeds.nonEmpty) { channel.sendMessage("@here").queue() }
+        }
+    }
 
     cleanUp()
 

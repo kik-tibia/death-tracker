@@ -5,7 +5,10 @@ import com.typesafe.scalalogging.StrictLogging
 import net.dv8tion.jda.api.JDABuilder
 import net.dv8tion.jda.api.entities.Guild
 
+import scala.concurrent.Await
 import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.duration.Duration
+import scala.jdk.CollectionConverters._
 
 object BotApp extends App with StrictLogging {
   logger.info("Starting up")
@@ -13,19 +16,16 @@ object BotApp extends App with StrictLogging {
   implicit private val actorSystem: ActorSystem = ActorSystem()
   implicit private val ex: ExecutionContextExecutor = actorSystem.dispatcher
 
-  private val jda = JDABuilder.createDefault(Config.token)
-    .build()
+  private val jda = JDABuilder.createDefault(Config.token).build()
 
   jda.awaitReady()
   logger.info("JDA ready")
 
-  private val guild: Guild = jda.getGuildById(Config.guildId)
-  println(guild)
+  private val guilds: List[Guild] = jda.getGuilds().asScala.toList
+  logger.info(guilds.toString())
 
-  private val deathsChannel = guild.getTextChannelById(Config.deathsChannelId)
-  private val deathTrackerStream = new DeathTrackerStream(deathsChannel)
-
+  private val deathTrackerStream = new DeathTrackerStream(guilds)
   deathTrackerStream.stream.run()
+
+  Await.result(actorSystem.whenTerminated, Duration.Inf)
 }
-
-
