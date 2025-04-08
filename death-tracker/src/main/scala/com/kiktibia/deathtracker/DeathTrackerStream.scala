@@ -145,6 +145,7 @@ class DeathTrackerStream(guilds: List[Guild])(implicit ex: ExecutionContextExecu
       case "druid" => ":snowflake:"
       case "sorcerer" => ":fire:"
       case "paladin" => ":bow_and_arrow:"
+      case "monk" => ":fist:"
       case "none" => ":hatching_chick:"
       case _ => ""
     }
