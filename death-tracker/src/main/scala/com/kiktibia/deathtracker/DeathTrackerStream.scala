@@ -90,14 +90,15 @@ class DeathTrackerStream(guilds: List[Guild])(implicit ex: ExecutionContextExecu
     Future.successful(newDeaths)
   }.withAttributes(logAndResume)
 
-  def deathsToEmbed(deaths: List[CharDeath]): List[MessageEmbed] = deaths.sortBy(_.death.time).map { charDeath =>
-    val charName = charDeath.char.character.character.name
-    val killer = charDeath.death.killers.last.name
-    val epochSecond = ZonedDateTime.parse(charDeath.death.time).toEpochSecond
-    new EmbedBuilder().setTitle(s"$charName ${vocEmoji(charDeath.char)}", charUrl(charName))
-      .setDescription(s"Killed at level ${charDeath.death.level.toInt} by **$killer**\nKilled at <t:$epochSecond>")
-      .setThumbnail(creatureImageUrl(killer)).setColor(13773097).build()
-  }
+  private def deathsToEmbeds(deaths: List[CharDeath]): List[MessageEmbed] = deaths.sortBy(_.death.time)
+    .map { charDeath =>
+      val charName = charDeath.char.character.character.name
+      val killer = charDeath.death.killers.last.name
+      val epochSecond = ZonedDateTime.parse(charDeath.death.time).toEpochSecond
+      new EmbedBuilder().setTitle(s"$charName ${vocEmoji(charDeath.char)}", charUrl(charName))
+        .setDescription(s"Killed at level ${charDeath.death.level.toInt} by **$killer**\nKilled at <t:$epochSecond>")
+        .setThumbnail(creatureImageUrl(killer)).setColor(13773097).build()
+    }
 
   private lazy val postToDiscordAndCleanUp = Flow[Set[CharDeath]].mapAsync(1) { charDeaths =>
     val notableCreatures = FileUtils.getLines(notableCreaturesFile).filter(_.nonEmpty).filterNot(_.startsWith("#"))
@@ -111,8 +112,8 @@ class DeathTrackerStream(guilds: List[Guild])(implicit ex: ExecutionContextExecu
     logger.info(s"New normal deaths: ${normalDeaths.length}")
     normalDeaths.foreach(d => logger.info(s"${d.char.character.character.name} - ${d.death.killers.last.name}"))
 
-    val notableEmbeds = deathsToEmbed(notableDeaths)
-    val normalEmbeds = deathsToEmbed(normalDeaths)
+    val notableEmbeds = deathsToEmbeds(notableDeaths)
+    val normalEmbeds = deathsToEmbeds(normalDeaths)
 
     guilds.foreach { guild =>
       val channels = guild.getTextChannels().asScala
