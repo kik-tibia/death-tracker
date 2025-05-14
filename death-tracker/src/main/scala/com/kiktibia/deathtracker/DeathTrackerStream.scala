@@ -26,6 +26,7 @@ import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.jdk.CollectionConverters._
+import net.dv8tion.jda.api.entities.MessageEmbed
 
 class DeathTrackerStream(guilds: List[Guild])(implicit ex: ExecutionContextExecutor, mat: Materializer)
     extends StrictLogging {
@@ -89,6 +90,15 @@ class DeathTrackerStream(guilds: List[Guild])(implicit ex: ExecutionContextExecu
     Future.successful(newDeaths)
   }.withAttributes(logAndResume)
 
+  def deathsToEmbed(deaths: List[CharDeath]): List[MessageEmbed] = deaths.sortBy(_.death.time).map { charDeath =>
+    val charName = charDeath.char.character.character.name
+    val killer = charDeath.death.killers.last.name
+    val epochSecond = ZonedDateTime.parse(charDeath.death.time).toEpochSecond
+    new EmbedBuilder().setTitle(s"$charName ${vocEmoji(charDeath.char)}", charUrl(charName))
+      .setDescription(s"Killed at level ${charDeath.death.level.toInt} by **$killer**\nKilled at <t:$epochSecond>")
+      .setThumbnail(creatureImageUrl(killer)).setColor(13773097).build()
+  }
+
   private lazy val postToDiscordAndCleanUp = Flow[Set[CharDeath]].mapAsync(1) { charDeaths =>
     val notableCreatures = FileUtils.getLines(notableCreaturesFile).filter(_.nonEmpty).filterNot(_.startsWith("#"))
     // Filter only the interesting deaths (nemesis bosses, rare bestiary)
@@ -101,22 +111,19 @@ class DeathTrackerStream(guilds: List[Guild])(implicit ex: ExecutionContextExecu
     logger.info(s"New normal deaths: ${normalDeaths.length}")
     normalDeaths.foreach(d => logger.info(s"${d.char.character.character.name} - ${d.death.killers.last.name}"))
 
-    val embeds = notableDeaths.sortBy(_.death.time).map { charDeath =>
-      val charName = charDeath.char.character.character.name
-      val killer = charDeath.death.killers.last.name
-      val epochSecond = ZonedDateTime.parse(charDeath.death.time).toEpochSecond
-      new EmbedBuilder().setTitle(s"$charName ${vocEmoji(charDeath.char)}", charUrl(charName))
-        .setDescription(s"Killed at level ${charDeath.death.level.toInt} by **$killer**\nKilled at <t:$epochSecond>")
-        .setThumbnail(creatureImageUrl(killer)).setColor(13773097).build()
-    }
+    val notableEmbeds = deathsToEmbed(notableDeaths)
+    val normalEmbeds = deathsToEmbed(normalDeaths)
 
     guilds.foreach { guild =>
-      guild.getTextChannels().asScala.find(c => c.getName().endsWith("alert") || c.getName().endsWith("alerts"))
-        .foreach { channel =>
-          // Send the embeds one at a time, otherwise some don't get sent if sending a lot at once
-          embeds.foreach { embed => channel.sendMessageEmbeds(embed).queue() }
-          if (embeds.nonEmpty) { channel.sendMessage("@here").queue() }
-        }
+      val channels = guild.getTextChannels().asScala
+      channels.find(c => c.getName().endsWith("alert") || c.getName().endsWith("alerts")).foreach { channel =>
+        // Send the embeds one at a time, otherwise some don't get sent if sending a lot at once
+        notableEmbeds.foreach { embed => channel.sendMessageEmbeds(embed).queue() }
+        if (notableEmbeds.nonEmpty) { channel.sendMessage("@here").queue() }
+      }
+      channels.find(c => c.getName().endsWith("deaths")).foreach { channel =>
+        normalEmbeds.foreach { embed => channel.sendMessageEmbeds(embed).queue() }
+      }
     }
 
     cleanUp()
