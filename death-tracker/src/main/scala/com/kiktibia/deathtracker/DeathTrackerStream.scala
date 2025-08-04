@@ -172,8 +172,11 @@ class DeathTrackerStream(guilds: List[Guild])(implicit ex: ExecutionContextExecu
         val rx2 = """( A| Of| The| In| On| To| And| With| From)(?=( ))""".r
         val parsed2 = rx2.replaceAllIn(parsed1, m => m.group(1).toLowerCase)
 
+        // Lowercase any possessive S, e.g. "Goshnar's Greed"
+        val parsed3 = parsed2.replaceAll("'S(?= |$)", "'s")
+
         // Replace spaces with underscores and make sure the first letter is capitalised
-        parsed2.replaceAll(" ", "_").capitalize
+        parsed3.replaceAll(" ", "_").capitalize
       }
     )
     s"https://tibia.fandom.com/wiki/Special:Redirect/file/$finalCreature.gif"
