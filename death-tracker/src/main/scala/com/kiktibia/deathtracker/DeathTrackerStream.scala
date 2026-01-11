@@ -106,6 +106,7 @@ class DeathTrackerStream(guilds: List[Guild])(implicit ex: ExecutionContextExecu
     val (notableDeaths, normalDeaths) = charDeaths.toList.partition { charDeath =>
       notableCreatures.exists(c => charDeath.death.killers.last.name.toLowerCase.endsWith(c))
     }
+    val highLevelDeaths = normalDeaths.filter(_.char.character.character.level >= 1000)
 
     logger.info(s"New notable deaths: ${notableDeaths.length}")
     notableDeaths.foreach(d => logger.info(s"${d.char.character.character.name} - ${d.death.killers.last.name}"))
@@ -114,6 +115,7 @@ class DeathTrackerStream(guilds: List[Guild])(implicit ex: ExecutionContextExecu
 
     val notableEmbeds = deathsToEmbeds(notableDeaths)
     val normalEmbeds = deathsToEmbeds(normalDeaths)
+    val highLevelEmbeds = deathsToEmbeds(highLevelDeaths)
 
     guilds.foreach { guild =>
       val channels = guild.getTextChannels().asScala
@@ -124,6 +126,9 @@ class DeathTrackerStream(guilds: List[Guild])(implicit ex: ExecutionContextExecu
       }
       channels.find(c => c.getName().endsWith("deaths")).foreach { channel =>
         normalEmbeds.foreach { embed => channel.sendMessageEmbeds(embed).queue() }
+      }
+      channels.find(c => c.getName().endsWith("deaths-1000")).foreach { channel =>
+        highLevelEmbeds.foreach { embed => channel.sendMessageEmbeds(embed).queue() }
       }
     }
 

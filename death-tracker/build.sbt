@@ -1,4 +1,4 @@
-ThisBuild / version := "1.6.4"
+ThisBuild / version := "1.7.0"
 ThisBuild / scalaVersion := "2.13.9"
 
 name := "death-tracker"
