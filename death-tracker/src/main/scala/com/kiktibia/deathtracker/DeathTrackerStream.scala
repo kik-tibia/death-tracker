@@ -106,7 +106,7 @@ class DeathTrackerStream(guilds: List[Guild])(implicit ex: ExecutionContextExecu
     val (notableDeaths, normalDeaths) = charDeaths.toList.partition { charDeath =>
       notableCreatures.exists(c => charDeath.death.killers.last.name.toLowerCase.endsWith(c))
     }
-    val highLevelDeaths = normalDeaths.filter(_.char.character.character.level >= 1000)
+    val highLevelDeaths = normalDeaths.filter(_.death.level >= 1000)
 
     logger.info(s"New notable deaths: ${notableDeaths.length}")
     notableDeaths.foreach(d => logger.info(s"${d.char.character.character.name} - ${d.death.killers.last.name}"))
