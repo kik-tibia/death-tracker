@@ -184,7 +184,7 @@ class DeathTrackerStream(guilds: List[Guild])(implicit ex: ExecutionContextExecu
         parsed3.replaceAll(" ", "_").capitalize
       }
     )
-    s"https://tibia.fandom.com/wiki/Special:Redirect/file/$finalCreature.gif"
+    s"https://www.tibiawiki.com.br/wiki/Special:Redirect/file/$finalCreature.gif"
   }
 
   private def getTrackedPlayers() = FileUtils.getLines(trackedPlayerFile).filter(_.nonEmpty)
