@@ -14,6 +14,7 @@ import com.kiktibia.deathtracker.tibiadata.response.WorldResponse
 import com.typesafe.scalalogging.StrictLogging
 import spray.json.DeserializationException
 import spray.json.JsonParser.ParsingException
+import spray.json._
 
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -68,13 +69,18 @@ class TibiaDataClient extends JsonSupport with StrictLogging {
     } yield unmarshalled
   }
 
+ import scala.concurrent.duration._
+
   private def unmarshalCharacter(response: HttpResponse, name: String) = {
     val decoded = decodeResponse(response)
-    Unmarshal(decoded).to[CharacterResponse].map(Right(_)).recover {
-      case e @ (_: ParsingException | _: DeserializationException) =>
-        val errorMessage = s"Failed to parse character with name $name"
-        logger.warn(errorMessage)
-        Left(errorMessage)
+    decoded.entity.toStrict(5.seconds).flatMap { strict =>
+      Unmarshal(strict).to[CharacterResponse].map(Right(_)).recover {
+        case e =>
+          val body = strict.data.utf8String
+          val headers = decoded.headers.map(h => s"${h.name}: ${h.value}").mkString(", ")
+          logger.warn(s"Failed to parse character $name: ${e.getMessage}, headers: [$headers], body: ${body.take(1000)}")
+          Left(s"Failed to parse: ${e.getMessage}")
+      }
     }
   }
 
