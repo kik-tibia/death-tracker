@@ -1,14 +1,5 @@
 package com.kiktibia.deathtracker
 
-import akka.actor.Cancellable
-import akka.stream.ActorAttributes.supervisionStrategy
-import akka.stream.Attributes
-import akka.stream.Materializer
-import akka.stream.Supervision
-import akka.stream.scaladsl.Flow
-import akka.stream.scaladsl.RunnableGraph
-import akka.stream.scaladsl.Sink
-import akka.stream.scaladsl.Source
 import com.kiktibia.deathtracker.tibiadata.FileUtils
 import com.kiktibia.deathtracker.tibiadata.TibiaDataClient
 import com.kiktibia.deathtracker.tibiadata.response.CharacterResponse
@@ -17,7 +8,16 @@ import com.kiktibia.deathtracker.tibiadata.response.WorldResponse
 import com.typesafe.scalalogging.StrictLogging
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Guild
-import net.dv8tion.jda.api.entities.TextChannel
+import net.dv8tion.jda.api.entities.MessageEmbed
+import org.apache.pekko.actor.Cancellable
+import org.apache.pekko.stream.ActorAttributes.supervisionStrategy
+import org.apache.pekko.stream.Attributes
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.Supervision
+import org.apache.pekko.stream.scaladsl.Flow
+import org.apache.pekko.stream.scaladsl.RunnableGraph
+import org.apache.pekko.stream.scaladsl.Sink
+import org.apache.pekko.stream.scaladsl.Source
 
 import java.io.File
 import java.time.ZonedDateTime
@@ -26,7 +26,6 @@ import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.jdk.CollectionConverters._
-import net.dv8tion.jda.api.entities.MessageEmbed
 
 class DeathTrackerStream(guilds: List[Guild])(implicit ex: ExecutionContextExecutor, mat: Materializer)
     extends StrictLogging {

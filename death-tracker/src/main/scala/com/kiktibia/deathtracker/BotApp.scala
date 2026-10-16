@@ -1,9 +1,9 @@
 package com.kiktibia.deathtracker
 
-import akka.actor.ActorSystem
 import com.typesafe.scalalogging.StrictLogging
 import net.dv8tion.jda.api.JDABuilder
 import net.dv8tion.jda.api.entities.Guild
+import org.apache.pekko.actor.ActorSystem
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContextExecutor

@@ -1,23 +1,21 @@
-ThisBuild / version := "1.7.6"
-ThisBuild / scalaVersion := "2.13.9"
+ThisBuild / version := "1.8.0"
+ThisBuild / scalaVersion := "2.13.18"
 
 name := "death-tracker"
 
 enablePlugins(DockerPlugin)
 enablePlugins(JavaAppPackaging)
 dockerExposedPorts += 443
+dockerBaseImage := "eclipse-temurin:17-jre"
 
-val AkkaHttpVersion = "10.2.9"
+val PekkoVersion = "1.7.1"
+val PekkoHttpVersion = "1.4.2"
 
-libraryDependencies += "com.typesafe" % "config" % "1.4.2"
-libraryDependencies += "com.typesafe.akka" %% "akka-stream" % "2.6.19"
-libraryDependencies += "com.typesafe.akka" %% "akka-http" % AkkaHttpVersion
-libraryDependencies += "com.typesafe.akka" %% "akka-http-spray-json" % AkkaHttpVersion
-libraryDependencies += "com.typesafe.scala-logging" %% "scala-logging" % "3.9.4"
-libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.2.10"
-libraryDependencies += "net.dv8tion" % "JDA" % "5.0.0-alpha.9"
+libraryDependencies += "com.typesafe" % "config" % "1.4.3"
+libraryDependencies += "org.apache.pekko" %% "pekko-stream" % PekkoVersion
+libraryDependencies += "org.apache.pekko" %% "pekko-http" % PekkoHttpVersion
+libraryDependencies += "org.apache.pekko" %% "pekko-http-spray-json" % PekkoHttpVersion
+libraryDependencies += "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5"
+libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.6.5"
+libraryDependencies += "net.dv8tion" % "JDA" % "6.7.0"
 libraryDependencies += "org.apache.commons" % "commons-text" % "1.9"
-
-libraryDependencies += "org.scalactic" %% "scalactic" % "3.2.12"
-libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.12" % Test
-libraryDependencies += "org.scalamock" %% "scalamock" % "5.1.0" % Test

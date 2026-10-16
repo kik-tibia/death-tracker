@@ -1,7 +1,7 @@
 package com.kiktibia.deathtracker
 package tibiadata
 
-import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
+import org.apache.pekko.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import com.kiktibia.deathtracker.tibiadata.response._
 import org.apache.commons.text.StringEscapeUtils
 import spray.json.{DefaultJsonProtocol, JsObject, JsString, JsValue, RootJsonFormat}

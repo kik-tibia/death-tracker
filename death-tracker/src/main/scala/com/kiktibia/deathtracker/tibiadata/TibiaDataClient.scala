@@ -1,14 +1,14 @@
 package com.kiktibia.deathtracker
 package tibiadata
 
-import akka.actor.ActorSystem
-import akka.http.scaladsl.Http
-import akka.http.scaladsl.coding.Coders
-import akka.http.scaladsl.model.HttpRequest
-import akka.http.scaladsl.model.HttpResponse
-import akka.http.scaladsl.model.headers.HttpEncodings
-import akka.http.scaladsl.model.headers.{Date => DateHeader}
-import akka.http.scaladsl.unmarshalling.Unmarshal
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.http.scaladsl.Http
+import org.apache.pekko.http.scaladsl.coding.Coders
+import org.apache.pekko.http.scaladsl.model.HttpRequest
+import org.apache.pekko.http.scaladsl.model.HttpResponse
+import org.apache.pekko.http.scaladsl.model.headers.HttpEncodings
+import org.apache.pekko.http.scaladsl.model.headers.{Date => DateHeader}
+import org.apache.pekko.http.scaladsl.unmarshalling.Unmarshal
 import com.kiktibia.deathtracker.tibiadata.response.CharacterResponse
 import com.kiktibia.deathtracker.tibiadata.response.WorldResponse
 import com.typesafe.scalalogging.StrictLogging
@@ -28,8 +28,8 @@ class TibiaDataClient extends JsonSupport with StrictLogging {
   implicit private val system: ActorSystem = ActorSystem()
   implicit private val executionContext: ExecutionContextExecutor = system.dispatcher
 
-  private val worldUrl = "https://api.tibiadata.com/v4/world/Nefera"
-  private val characterUrl = "https://api.tibiadata.com/v4/character/"
+  private val worldUrl = "https://api.tibiadata.com/v5/world/Nefera"
+  private val characterUrl = "https://api.tibiadata.com/v5/character/"
   private val characterMap = mutable.Map.empty[String, ZonedDateTime]
 
   def getWorld(): Future[WorldResponse] = {
