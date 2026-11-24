@@ -9,6 +9,7 @@ object Config {
 
   val token: String = root.getString("token")
   val trackedPlayerFile: String = root.getString("tracked-player-file")
+  val gifRedirectorUrl: String = root.getString("gif-redirector-url")
   val notableCreaturesFile: String = root.getString("notable-creatures-file")
   val creatureUrlMappings: Map[String, String] = root.getObject("creature-url-mappings").asScala.map { case (k, v) =>
     k -> v.unwrapped().toString
